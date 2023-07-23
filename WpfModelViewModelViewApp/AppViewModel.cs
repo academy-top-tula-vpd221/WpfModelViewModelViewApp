@@ -12,6 +12,8 @@ namespace WpfModelViewModelViewApp
     public class AppViewModel : INotifyPropertyChanged
     {
         private Employee employeeSelected;
+        private IDialogService dialogService;
+        private IFileService fileService;
 
         public ObservableCollection<Employee> Employees { set; get; }
 
@@ -25,8 +27,11 @@ namespace WpfModelViewModelViewApp
             }
         }
 
-        public AppViewModel()
+        public AppViewModel(IDialogService dialogService, IFileService fileService)
         {
+            this.dialogService = dialogService;
+            this.fileService = fileService;
+
             Employees = new ObservableCollection<Employee>()
             {
                 new() { Name = "Bob",
@@ -51,6 +56,130 @@ namespace WpfModelViewModelViewApp
                     Salary = 80000 },
             };
         }
+
+        private AppCommand addEmployeeCommand;
+        public AppCommand AddEmployeeCommand
+        {
+            get
+            {
+                return addEmployeeCommand ??
+                    (
+                        addEmployeeCommand = new AppCommand(
+                                param =>
+                                {
+                                    Employee employee = new Employee();
+                                    Employees.Insert(0, employee);
+                                    EmployeeSelected = employee;
+                                }
+                            )
+                    );
+            }
+        }
+
+        private AppCommand deleteEmployeeCommand;
+        public AppCommand DeleteEmployeeCommand
+        {
+            get
+            {
+                return deleteEmployeeCommand ??
+                    (
+                        deleteEmployeeCommand = new AppCommand(
+                            param =>
+                            {
+                                Employee employee = param as Employee;
+                                if(employee is not null)
+                                {
+                                    int position = Employees.IndexOf(employee);
+                                    Employees.Remove(employee);
+                                    if(Employees.Count > 0)
+                                    {
+                                        if (position >= Employees.Count)
+                                            position = Employees.Count - 1;
+                                        EmployeeSelected = Employees[position];
+                                    }
+                                }
+                                    
+                            },
+                            param => Employees.Count > 0)
+                    );
+            }
+        }
+
+        private AppCommand copyEmployeeCommand;
+        public AppCommand CopyEmployeeCommand
+        {
+            get
+            {
+                return copyEmployeeCommand ??
+                    (
+                        copyEmployeeCommand = new AppCommand(
+                            param =>
+                            {
+                                Employee employee = param as Employee;
+                                Employees.Insert(0, employee);
+                            },
+                            param => Employees.Count > 0)
+                    );
+            }
+        }
+
+        private AppCommand saveFileCommand;
+        public AppCommand SaveFileCommand
+        {
+            get
+            {
+                return saveFileCommand ??
+                    (
+                        saveFileCommand = new AppCommand(
+                            param =>
+                            {
+                                try
+                                {
+                                    if(dialogService.SaveFileDialog())
+                                    {
+                                        fileService.SaveFile(dialogService.FilePath, Employees.ToList());
+                                        dialogService.ShowMessage("List of employees saved to file");
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    dialogService.ShowMessage(ex.Message);
+                                }
+                            })
+                    );
+            }
+        }
+
+        private AppCommand openFileCommand;
+        public AppCommand OpenFileCommand
+        {
+            get
+            {
+                return openFileCommand ??
+                    (
+                        openFileCommand = new AppCommand(
+                            param =>
+                            {
+                                try
+                                {
+                                    if(dialogService.OpenFileDialog())
+                                    {
+                                        var employyes = fileService.OpenFile(dialogService.FilePath);
+                                        Employees.Clear();
+                                        foreach (var employee in employyes)
+                                            Employees.Add(employee);
+                                        dialogService.ShowMessage("List of employees read from file");
+                                    }
+                                }
+                                catch(Exception ex)
+                                {
+                                    dialogService.ShowMessage(ex.Message);
+                                }
+                            })
+                    );
+            }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
         public void OnPropertyChanged([CallerMemberName] string propertyName = "")
         {

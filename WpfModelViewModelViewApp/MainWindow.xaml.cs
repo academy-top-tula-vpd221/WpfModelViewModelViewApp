@@ -25,9 +25,11 @@ namespace WpfModelViewModelViewApp
         {
             InitializeComponent();
 
-            viewModel = new AppViewModel();
-
+            viewModel = new AppViewModel(new BaseDialogService(), new JsonFileService());
             this.DataContext = viewModel;
+
+            //var command = new AppCommand(p => { MessageBox.Show("Coomand " + p.ToString()); });
+            //command.Execute("Hello");
         }
 
         private void btnService_Click(object sender, RoutedEventArgs e)
